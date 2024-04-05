@@ -27,3 +27,5 @@ carpa-*.tar
 
 # Ignore the config file for the Elixir LS Erlang LS
 .elixir_ls/
+
+last_commit_hash.txt
