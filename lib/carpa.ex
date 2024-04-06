@@ -1,20 +1,16 @@
 defmodule Carpa do
-  use GenServer
+  use Agent
+
   def start_link do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
+    Agent.start_link(fn -> %{} end, name: __MODULE__)
+    CheckRepo.start_link()
   end
 
-  def init(init_arg) do
-    {:ok, init_arg}
+  def reg_repo(repo,branch,command) do
+    Agent.update(__MODULE__, fn state -> Map.put(state, {repo,branch}, command) end)
   end
 
-  def check_repo(repo, branch) do
-    GenServer.call(__MODULE__, {:check_repo, repo, branch})
+  def get_job_command(repo, branch) do
+    Agent.get(__MODULE__, fn state -> Map.get(state, {repo,branch}) end)
   end
-
-  def handle_call({:check_repo, repo, branch}, _from, state) do
-    IO.puts "Checking #{repo} on branch #{branch}"
-    {:reply, :ok, state}
-  end
-
 end
