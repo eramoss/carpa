@@ -3,15 +3,19 @@ defmodule Worker do
     File.mkdir_p("tmp")
     IO.puts "Running command: #{command} for #{repo} on branch #{branch}"
     clone_inside_tmp(repo, branch)
-    System.cmd("bash", ["-c", command])
-    File.cd("../..")
-    File.rm_rf("tmp")
+    dir = "tmp/#{hash_string(repo)}"
+    System.cmd("bash", ["-c", "cd #{dir} && #{command}"], into: IO.stream(:stdio, :line))
+    System.cmd("rm", ["-rf", dir])
   end
 
   defp clone_inside_tmp(repo, branch) do
-    File.cd("tmp")
-    System.cmd("git", ["clone", repo])
-    File.cd("#{String.split(repo, "/") |> List.last |> String.replace(~r/\.git$/, "")}")
-    System.cmd("git", ["checkout", branch])
+    System.cmd("git", ["clone", repo, "tmp/#{hash_string(repo)}"],into: IO.stream(:stdio, :line))
+    System.cmd("git", ["-C" ,"tmp/#{hash_string(repo)}","checkout", branch], into: IO.stream(:stdio, :line))
+  end
+
+  defp hash_string(string) do
+    :crypto.hash(:sha256, string)
+    |> Base.encode16()
+    |> String.downcase()
   end
 end
