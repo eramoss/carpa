@@ -21,7 +21,7 @@ defmodule CarpaTest do
 
     describe "get_current_commit/2" do
       test "returns the current commit hash" do
-        assert Repo.get_current_commit("./.git", "master") =~ ~r/^[0-9a-f]{40}$/
+        assert Repo.get_current_commit("../.git", "master") =~ ~r/^[0-9a-f]{40}$/
       end
     end
 
