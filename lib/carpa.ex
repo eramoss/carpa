@@ -1,5 +1,14 @@
 defmodule Carpa do
   use Agent
+  use Application
+
+  def start(_type, _args) do
+    children = [
+      {Plug.Cowboy, scheme: :http, plug: Carpa.Router, options: [port: 4000]}
+    ]
+    main()
+    Supervisor.start_link(children, strategy: :one_for_one)
+  end
 
   def start_link do
     Agent.start_link(fn -> %{} end, name: __MODULE__)
@@ -28,5 +37,27 @@ defmodule Carpa do
     end)
     Process.sleep(10000)
     big_check_loop()
+  end
+
+
+end
+defmodule Carpa.Router do
+  use Plug.Router
+
+  plug :match
+  plug :dispatch
+
+  post "/reg_repo" do
+    {:ok, params, _} = Plug.Conn.read_body(conn)
+    params = URI.decode_query(params)
+    repo = Map.get(params, "repo")
+    branch = Map.get(params, "branch")
+    command = Map.get(params, "command")
+    Carpa.reg_repo(repo, branch, command)
+    send_resp(conn, 200, "Job started")
+  end
+
+  match _ do
+    send_resp(conn, 404, "Not found")
   end
 end
