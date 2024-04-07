@@ -1,5 +1,6 @@
 defmodule Dispatcher do
   use GenServer
+  require Logger
 
   def start_link do
     GenServer.start_link(__MODULE__, [], name: __MODULE__)
@@ -14,9 +15,9 @@ defmodule Dispatcher do
     spawn(fn ->
       job_command = Carpa.get_job_command(repo, branch)
       if job_command == nil do
-        IO.puts "No job command found for #{repo} on branch #{branch}"
+        Logger.error "No command for #{repo} on branch #{branch}"
       else
-        IO.puts "Dispatching worker with command: #{job_command} for #{repo} on branch #{branch}"
+        Logger.info "Running job for #{repo} on branch #{branch}"
         Task.async(fn -> Worker.run(repo,branch,job_command) end)
       end
     end)
