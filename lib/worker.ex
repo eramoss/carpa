@@ -29,7 +29,7 @@ defmodule Worker do
 
   defp handle_result({reason, exit_n}, repo, branch, log_file) do
     File.write!(log_file, reason)
-    Logger.error("Job for #{repo} on branch #{branch} failed: #{exit_n}\n See the logs for more details")
+    Logger.error("Job for #{repo} on branch #{branch} failed: #{exit_n}\n See the logs for more details: #{log_file}")
   end
 
   defp hash_string(string) do
