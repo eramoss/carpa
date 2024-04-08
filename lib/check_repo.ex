@@ -23,15 +23,13 @@ defmodule CheckRepo do
     file_name = Utils.prepare_file_name(repo, branch)
     File.touch(file_name)
     last_commit = File.read(file_name) |> Utils.handle_file_read()
-    if !Utils.is_already_running_test?(repo, branch) do
       if current_commit == last_commit do
         Logger.info "No new commits"
       else
         Logger.info "New commit detected"
         File.write!(file_name, current_commit)
-        spawn(Dispatcher, :dispatch, [repo, branch])
+        spawn(Dispatcher, :dispatch, [repo, branch, current_commit])
       end
-    end
     {:reply, :ok, state}
 end
 
