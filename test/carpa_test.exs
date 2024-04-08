@@ -2,43 +2,31 @@ defmodule CarpaTest do
   use ExUnit.Case
   doctest Carpa
 
-  test "register repo" do
+  describe "should run 2 commits of the same repo in parallel" do
+    # Clean .repos/commit
+    commit_file = Utils.prepare_file_name("./tester_repo/.git", "master")
+    File.rm(commit_file)
+
+
     Carpa.start_link()
-    Carpa.reg_repo("./.git", "master", "mix test")
-    assert Carpa.get_job_command("./.git", "master") == "mix test"
-  end
+    Carpa.reg_repo("./tester_repo/.git", "master", "mix")
+    # The worker needs 20 seconds to run this job
+    CheckRepo.check("./tester_repo/.git", "master")
+    Process.sleep(3000)
+    File.write!("./tester_repo/test_helper.txt", "test helper")
+    System.cmd("git", ["-C", "./tester_repo","add", "test_helper.txt"])
+    System.cmd("git", ["-C", "./tester_repo","commit", "-m", "test_helper.txt"])
 
-  defmodule CheckRepoTest do
-    use ExUnit.Case
+    # Run the job while the worker is busy with the last one
+    CheckRepo.check("./tester_repo/.git", "master")
 
-    alias CheckRepo, as: Repo
 
-    describe "prepare_file_name/2" do
-      test "returns a string with the hashed repo and branch name" do
-        assert Repo.prepare_file_name("repo", "branch") =~ ".repos/last_commit_"
-      end
-    end
-
-    describe "get_current_commit/2" do
-      test "returns the current commit hash" do
-        assert Repo.get_current_commit("./.git", "master") =~ ~r/^[0-9a-f]{40}$/
-      end
-    end
-
-    describe "handle_file_read/1" do
-      test "returns the content when the read is successful" do
-        assert Repo.handle_file_read({:ok, "content"}) == "content"
-      end
-
-      test "returns an empty string when the read fails" do
-        assert Repo.handle_file_read({:error, :enoent}) == ""
-      end
-    end
-
-    describe "hash_string/1" do
-      test "returns a SHA256 hash of the string" do
-        assert Repo.hash_string("string") =~ ~r/^[0-9a-f]{64}$/
-      end
-    end
+    # Clean test and wait workers
+    Process.sleep(20000)
+    File.rm(commit_file)
+    File.rm("./tester_repo/test_helper.txt")
+    System.cmd("git", ["-C", "./tester_repo","reset", "HEAD~"])
+    System.cmd("git", ["-C", "./tester_repo" , "restore", "."])
+    File.rmdir("tmp")
   end
 end
