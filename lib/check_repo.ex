@@ -17,41 +17,22 @@ defmodule CheckRepo do
 
   def handle_call({:check, repo, branch}, _from, state) do
     Logger.info("Checking repo #{repo} branch #{branch}")
-    current_commit = get_current_commit(repo, branch)
+    current_commit = Utils.get_current_commit(repo, branch)
 
 
-    file_name = prepare_file_name(repo, branch)
+    file_name = Utils.prepare_file_name(repo, branch)
     File.touch(file_name)
-    last_commit = File.read(file_name) |> handle_file_read()
-
-    if current_commit == last_commit do
-      Logger.info "No new commits"
-    else
-      Logger.info "New commit detected"
-      File.write!(file_name, current_commit)
-      spawn(Dispatcher, :dispatch, [repo, branch])
+    last_commit = File.read(file_name) |> Utils.handle_file_read()
+    if !Utils.is_already_running_test?(repo, branch) do
+      if current_commit == last_commit do
+        Logger.info "No new commits"
+      else
+        Logger.info "New commit detected"
+        File.write!(file_name, current_commit)
+        spawn(Dispatcher, :dispatch, [repo, branch])
+      end
     end
     {:reply, :ok, state}
-  end
-
-  def prepare_file_name(repo, branch) do
-    hash = hash_string("#{repo}#{branch}")
-    file = "last_commit_#{hash}"
-    File.mkdir_p(".repos")
-    ".repos/#{file}"
-  end
-
-  def get_current_commit(repo, branch) do
-    command = "git ls-remote #{repo} refs/heads/#{branch} | cut -f 1"
-    System.cmd("bash", ["-c", command]) |> elem(0)
-  end
-
-  def handle_file_read({:ok, content}), do: content
-  def handle_file_read({:error, _reason}), do: ""
-  def hash_string(string) do
-    :crypto.hash(:sha256, string)
-    |> Base.encode16()
-    |> String.downcase()
-  end
+end
 
 end
