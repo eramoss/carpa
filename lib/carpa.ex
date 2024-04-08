@@ -2,6 +2,17 @@ defmodule Carpa do
   use Agent
   use Application
 
+  @tools_command_map %{
+    cmake: "mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=Debug ../ && cmake --build . --config Debug && ctest -j10 -C Debug -T test --output-on-failure",
+    mix: "mix deps.get && mix test",
+    npm: "npm install && npm run test",
+    make: "make && make test",
+    ruby: "bundle install && bundle exec rake test",
+    rust: "cargo build && cargo test",
+    python: "pip install -r requirements.txt && python -m unittest discover",
+    cabal: "cabal build && cabal test",
+    gradle: "./gradlew build && ./gradlew test",
+  }
   def start(_type, _args) do
     children = [
       {Plug.Cowboy, scheme: :http, plug: Carpa.Router, options: [port: 4000]}
@@ -15,12 +26,14 @@ defmodule Carpa do
     CheckRepo.start_link()
   end
 
-  def reg_repo(repo,branch,command) do
-    Agent.update(__MODULE__, fn state -> Map.put(state, {repo,branch}, command) end)
+  def reg_repo(repo,branch,tool) do
+    Agent.update(__MODULE__, fn state -> Map.put(state, {repo,branch}, tool) end)
   end
 
   def get_job_command(repo, branch) do
-    Agent.get(__MODULE__, fn state -> Map.get(state, {repo,branch}) end)
+    tool = Agent.get(__MODULE__, fn state -> Map.get(state, {repo,branch}) end)
+    tool = String.to_atom(tool)
+    Map.get(@tools_command_map, tool)
   end
 
   def main do
@@ -52,8 +65,8 @@ defmodule Carpa.Router do
     params = URI.decode_query(params)
     repo = Map.get(params, "repo")
     branch = Map.get(params, "branch")
-    command = Map.get(params, "command")
-    Carpa.reg_repo(repo, branch, command)
+    tool = Map.get(params, "tool")
+    Carpa.reg_repo(repo, branch, tool)
     send_resp(conn, 200, "Job started")
   end
 
