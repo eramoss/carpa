@@ -4,7 +4,6 @@ defmodule CarpaTest do
 
 
     if System.get_env("RUN_INTEGRATED_TESTS") do
-      defmodule IntegratedTests do
         #WARNING:
         #THIS TEST SHOULD BE RUN ALONE AND WITHOUT ELIXIR LS ON vscode
         describe "should run 2 commits of the same repo in parallel" do
@@ -34,7 +33,6 @@ defmodule CarpaTest do
           System.cmd("rm", ["-rf","./tmp"])
           System.stop(0)
         end
-      end
     end
 
 end
